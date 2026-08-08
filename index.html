@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TTA — Iceland Return: UK vs. NOR</title>
+<style>
+  :root { color-scheme: dark; }
+  body { background:#0b0f14; color:#d7dde3; font:14px/1.45 -apple-system,
+         "Segoe UI", Roboto, sans-serif; margin:0; padding:14px; }
+  h1 { font-size:17px; margin:0 0 2px; }
+  .sub { color:#8a94a0; font-size:12px; margin-bottom:12px; }
+  .verdicts { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+  .v { border-radius:8px; padding:8px 14px; font-weight:600;
+       border:1px solid #2a333d; }
+  .OK   { background:#0e2b16; color:#5fd97f; border-color:#1e5a30; }
+  .WARN { background:#302505; color:#ffcc4d; border-color:#6b5410; }
+  .NOGO { background:#330d0d; color:#ff6b6b; border-color:#6e1c1c; }
+  .NA   { background:#161c22; color:#5c6670; }
+  .scen { border:1px solid #2a333d; border-radius:8px; padding:10px 12px;
+          margin-bottom:10px; }
+  .scen h2 { font-size:14px; margin:0 0 6px; }
+  pre { margin:0; font:12px/1.5 ui-monospace, Menlo, Consolas, monospace;
+        white-space:pre; overflow-x:auto; color:#b9c2cb; }
+  .note { color:#8a94a0; font-size:12px; margin-top:12px; }
+</style>
+</head>
+<body>
+<h1>Iceland Return — Routenvergleich UK vs. NOR — zwei Tage bis EDDK/EDDV</h1>
+<div class="sub" id="meta">lade…</div>
+<div class="verdicts" id="verdicts"></div>
+<div id="scenarios"></div>
+<div class="note">
+  ICE-Gates auf F090/F130 je Routenpunkt zur Überflugzeit, FOG = 2m-Spread
+  (ECMWF) am Ziel und Enroute-Alternate. Zwei Tage je Szenario: Tag 1 Erstsprung, Folgetag Weiterführung (EGPB–EGNT–Dover–EDDK bzw. ENBR–Skagerrak–EKBI–EDDV) mit gleicher ETD. Empfehlung: kombinierte Gates → Gesamtflugzeit → Spread-Gates. Statische Faktoren (Schengen/GAR, Wasserstrecken,
+  Alternate-Ketten) im README — sie ändern sich nicht pro Wetterlauf.
+  Ice-Flags bewusst überwarnend. Planungshilfe — keine PIC-Entscheidung.
+</div>
+<script>
+const SRC = "iceland_return.txt";
+const RANK = { "OK":0, "WARN":1, "NOGO":2 };
+
+fetch(SRC + "?t=" + Date.now()).then(r => {
+  if (!r.ok) throw new Error(r.status);
+  return r.text();
+}).then(txt => {
+  document.getElementById("meta").textContent =
+      txt.split("\n").slice(0, 2).join(" — ");
+
+  const scen = [];
+  const re = /=== SZENARIO ETD (\d{4})Z[^=]*===([\s\S]*?)(?====|$)/g;
+  const vre = /VERDICT UK:\[(\w+)\] ([\d.]+)\+([\d.]+)h T1:(\w+)\/T2:(\w+) \| NOR:\[(\w+)\] ([\d.]+)\+([\d.]+)h T1:(\w+)\/T2:(\w+) \| EMPFEHLUNG: (\w+) \(([^)]*)\)/;
+  let m;
+  while ((m = re.exec(txt)) !== null) {
+    const g = m[2].match(vre);
+    scen.push({ etd: m[1], body: m[2].trim(),
+      uk: g ? g[1] : "NA", nor: g ? g[6] : "NA",
+      ukT: g ? g[4] + "/" + g[5] : "", norT: g ? g[9] + "/" + g[10] : "",
+      pick: g ? g[11] : "?", why: g ? g[12] : "" });
+  }
+
+  const V = document.getElementById("verdicts");
+  scen.forEach(s => {
+    const cls = s.pick === "UK" ? s.uk : s.nor;
+    const d = document.createElement("div");
+    d.className = "v " + (cls in RANK ? cls : "NA");
+    d.textContent = "ETD " + s.etd + "Z → " + s.pick +
+        " (UK " + s.ukT + " / NOR " + s.norT + ")";
+    d.title = s.why;
+    V.appendChild(d);
+  });
+
+  const S = document.getElementById("scenarios");
+  scen.forEach(s => {
+    const box = document.createElement("div");
+    box.className = "scen";
+    box.innerHTML = "<h2>ETD BIRK " + s.etd + "Z — Empfehlung " + s.pick +
+      " <span style='color:#8a94a0;font-weight:400'>(" + s.why +
+      ")</span></h2><pre></pre>";
+    box.querySelector("pre").textContent = s.body;
+    S.appendChild(box);
+  });
+}).catch(e => {
+  document.getElementById("meta").textContent =
+    "Briefing nicht ladbar (" + e.message + ") — Workflow schon gelaufen?";
+});
+</script>
+</body>
+</html>
