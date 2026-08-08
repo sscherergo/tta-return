@@ -1,0 +1,5 @@
+httpx
+ecmwf-opendata
+xarray
+cfgrib
+eccodes
