@@ -1,0 +1,41 @@
+name: iceland-return
+
+on:
+  workflow_dispatch:
+    inputs:
+      day:
+        description: "Flugtag YYYY-MM-DD (leer = heute/morgen automatisch)"
+        required: false
+        default: ""
+      etds:
+        description: "ETD-BIRK-Szenarien HHMM, kommagetrennt"
+        required: false
+        default: "0900,1100,1300"
+
+permissions:
+  contents: write
+
+jobs:
+  briefing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install httpx ecmwf-opendata xarray cfgrib eccodes
+
+      - name: Run comparison briefing
+        run: |
+          python iceland_return.py "${{ inputs.day }}" "${{ inputs.etds }}"
+
+      - name: Commit result
+        run: |
+          git config user.name "tta-bot"
+          git config user.email "tta-bot@users.noreply.github.com"
+          git add iceland_return.txt
+          git diff --cached --quiet || git commit -m "iceland-return briefing"
+          git push
